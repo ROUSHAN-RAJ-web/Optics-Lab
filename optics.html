@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optics Lab: Spherical Mirrors</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        canvas {
+            cursor: crosshair;
+            background: #020617;
+        }
+        .control-panel {
+            backdrop-filter: blur(12px);
+            background: rgba(15, 23, 42, 0.9);
+        }
+        input[type="range"] {
+            accent-color: #3b82f6;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 8px;
+            appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #f8fafc;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <header class="p-4 border-b border-slate-800 flex justify-between items-center shrink-0">
+        <div>
+            <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                Precision Spherical Mirror Lab
+            </h1>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Standard Cartesian Sign Convention</p>
+        </div>
+        <button id="resetBtn" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold transition border border-slate-700 shadow-lg">Reset Simulation</button>
+    </header>
+
+    <main class="relative flex-grow overflow-hidden bg-[radial-gradient(circle_at_center,_#0f172a_0%,_#020617_100%)]">
+        <canvas id="opticsCanvas"></canvas>
+        
+        <!-- Stats HUD -->
+        <div class="absolute top-6 left-6 p-5 rounded-2xl control-panel border border-slate-800 pointer-events-none select-none min-w-[260px] shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <span id="mirrorTypeLabel" class="text-xs font-black text-blue-400 uppercase tracking-widest">Mirror</span>
+                <div class="px-2 py-0.5 rounded bg-blue-500/10 text-[10px] text-blue-400 border border-blue-500/20 font-bold">LIVE</div>
+            </div>
+            
+            <div class="space-y-2.5 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-500 font-medium">Object Dist (u)</span>
+                    <span id="statU" class="font-mono font-bold text-slate-200">-0.0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500 font-medium">Focal Length (f)</span>
+                    <span id="statF" class="font-mono font-bold text-amber-400">0.0</span>
+                </div>
+                <div class="flex justify-between border-t border-slate-800 pt-2.5 mt-2">
+                    <span class="text-slate-500 font-medium">Image Dist (v)</span>
+                    <span id="statV" class="font-mono font-bold text-emerald-400">0.0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500 font-medium">Magnification (m)</span>
+                    <span id="statM" class="font-mono font-bold text-emerald-400">0.0</span>
+                </div>
+            </div>
+
+            <div id="imageDesc" class="mt-4 p-3 bg-slate-950/50 rounded-xl text-[11px] text-slate-400 leading-relaxed border border-slate-800/50 italic">
+                Awaiting calculation...
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-6 control-panel border-t border-slate-800 shrink-0">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10">
+            
+            <div class="space-y-3">
+                <div class="flex justify-between text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                    <label>Focal Length (f)</label>
+                    <span id="fValue" class="text-amber-400 font-mono">-150</span>
+                </div>
+                <input type="range" id="fRange" min="-300" max="300" step="1" value="-150" class="w-full">
+                <div class="flex justify-between text-[9px] text-slate-600 font-black">
+                    <span>CONCAVE (-)</span>
+                    <span>PLANE (0)</span>
+                    <span>CONVEX (+)</span>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex justify-between text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                    <label>Object Height (h)</label>
+                    <span id="hValue" class="text-blue-400 font-mono">60</span>
+                </div>
+                <input type="range" id="hRange" min="-150" max="150" step="1" value="60" class="w-full">
+            </div>
+
+            <div class="flex items-center justify-around gap-4">
+                <button id="toggleRays" class="flex-1 py-3 px-2 rounded-xl border border-slate-700 bg-slate-800/40 hover:bg-slate-700 transition flex flex-col items-center gap-1">
+                    <span class="text-[9px] font-black text-slate-500 uppercase">Principal Rays</span>
+                    <span id="raysStatus" class="text-xs font-bold text-blue-400">ENABLED</span>
+                </button>
+                <button id="toggleVirtual" class="flex-1 py-3 px-2 rounded-xl border border-slate-700 bg-slate-800/40 hover:bg-slate-700 transition flex flex-col items-center gap-1">
+                    <span class="text-[9px] font-black text-slate-500 uppercase">Virtual Ext.</span>
+                    <span id="virtualStatus" class="text-xs font-bold text-blue-400">VISIBLE</span>
+                </button>
+            </div>
+
+        </div>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('opticsCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const state = {
+            f: -150,
+            u: -250,
+            ho: 60,
+            poleX: 0,
+            centerY: 0,
+            isDragging: false,
+            dragTarget: null,
+            showRays: true,
+            showVirtual: true,
+            mirrorHeight: 380
+        };
+
+        const els = {
+            fRange: document.getElementById('fRange'),
+            hRange: document.getElementById('hRange'),
+            fValue: document.getElementById('fValue'),
+            hValue: document.getElementById('hValue'),
+            statU: document.getElementById('statU'),
+            statF: document.getElementById('statF'),
+            statV: document.getElementById('statV'),
+            statM: document.getElementById('statM'),
+            imageDesc: document.getElementById('imageDesc'),
+            label: document.getElementById('mirrorTypeLabel'),
+            raysStatus: document.getElementById('raysStatus'),
+            virtualStatus: document.getElementById('virtualStatus')
+        };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            state.poleX = canvas.width * 0.7; 
+            state.centerY = canvas.height / 2;
+            render();
+        }
+
+        function getMirrorProperties() {
+            const r = 2 * state.f;
+            const cx = state.poleX + r;
+            return { r: Math.abs(r), cx, cy: state.centerY };
+        }
+
+        function getRayCircleIntersection(p1, p2, cx, cy, r) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const a = dx * dx + dy * dy;
+            const b = 2 * (dx * (p1.x - cx) + dy * (p1.y - cy));
+            const c = (p1.x - cx) * (p1.x - cx) + (p1.y - cy) * (p1.y - cy) - r * r;
+            const det = b * b - 4 * a * c;
+
+            if (det < 0) return null;
+
+            const t1 = (-b + Math.sqrt(det)) / (2 * a);
+            const t2 = (-b - Math.sqrt(det)) / (2 * a);
+
+            const pt1 = { x: p1.x + t1 * dx, y: p1.y + t1 * dy };
+            const pt2 = { x: p1.x + t2 * dx, y: p1.y + t2 * dy };
+
+            return Math.abs(pt1.x - state.poleX) < Math.abs(pt2.x - state.poleX) ? pt1 : pt2;
+        }
+
+        function drawMirror() {
+            const { r, cx, cy } = getMirrorProperties();
+            if (state.f === 0) {
+                ctx.strokeStyle = '#94a3b8';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(state.poleX, cy - state.mirrorHeight/2);
+                ctx.lineTo(state.poleX, cy + state.mirrorHeight/2);
+                ctx.stroke();
+                return;
+            }
+
+            const angleLimit = Math.asin(Math.min(state.mirrorHeight / (2 * r), 0.98));
+            const startAngle = state.f < 0 ? -angleLimit : Math.PI - angleLimit;
+            const endAngle = state.f < 0 ? angleLimit : Math.PI + angleLimit;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, startAngle, endAngle);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#f1f5f9';
+            ctx.stroke();
+
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(71, 85, 105, 0.6)';
+            const steps = 30;
+            for (let i = 0; i <= steps; i++) {
+                const ang = startAngle + (i / steps) * (endAngle - startAngle);
+                const x = cx + r * Math.cos(ang);
+                const y = cy + r * Math.sin(ang);
+                const nx = Math.cos(ang);
+                const ny = Math.sin(ang);
+                const hDir = 1; 
+
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + nx * hDir * 10 - ny * 6, y + ny * hDir * 10 + nx * 6);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // Modified reflection logic to align exactly with the paraxial image arrow
+        function drawReflectedPath(pHit, targetX, targetY, color, isInfinite = false) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+
+            // Vector from Hit to Target (the image tip)
+            const dx = targetX - pHit.x;
+            const dy = targetY - pHit.y;
+            const len = Math.sqrt(dx*dx + dy*dy);
+            const ux = dx/len;
+            const uy = dy/len;
+
+            // If image is behind mirror (targetX > poleX), rays diverge from target
+            // If image is in front (targetX < poleX), rays converge at target
+            const isVirtual = targetX > state.poleX;
+
+            if (isInfinite) {
+                // For u=f, reflected rays are parallel
+                ctx.beginPath();
+                ctx.moveTo(pHit.x, pHit.y);
+                ctx.lineTo(pHit.x - 2000, pHit.y);
+                ctx.stroke();
+            } else if (!isVirtual) {
+                // Real Image: Ray goes through target and continues
+                ctx.beginPath();
+                ctx.moveTo(pHit.x, pHit.y);
+                ctx.lineTo(pHit.x + ux * 2000, pHit.y + uy * 2000);
+                ctx.stroke();
+            } else {
+                // Virtual Image: Ray goes away from target
+                ctx.beginPath();
+                ctx.moveTo(pHit.x, pHit.y);
+                ctx.lineTo(pHit.x - ux * 2000, pHit.y - uy * 2000);
+                ctx.stroke();
+
+                if (state.showVirtual) {
+                    ctx.setLineDash([4, 4]);
+                    ctx.globalAlpha = 0.4;
+                    ctx.beginPath();
+                    ctx.moveTo(pHit.x, pHit.y);
+                    ctx.lineTo(targetX, targetY);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
+
+        function drawRays() {
+            if (!state.showRays || state.f === 0) return;
+
+            const { r, cx, cy } = getMirrorProperties();
+            const objX = state.poleX + state.u;
+            const objY = state.centerY - state.ho;
+            const focusX = state.poleX + state.f;
+
+            // Calculate exact paraxial image point
+            const v = (state.u * state.f) / (state.u - state.f);
+            const m = -v / state.u;
+            const hi = m * state.ho;
+            const targetX = state.poleX + v;
+            const targetY = state.centerY - hi;
+            const isAtFocus = Math.abs(state.u - state.f) < 1;
+
+            // 1. Parallel Ray
+            const hit1 = getRayCircleIntersection({x: objX, y: objY}, {x: state.poleX, y: objY}, cx, cy, r);
+            if (hit1) {
+                drawPath([{x: objX, y: objY}, hit1], 'rgba(251, 191, 36, 0.7)', 1.5);
+                drawReflectedPath(hit1, targetX, targetY, 'rgba(251, 191, 36, 0.7)', isAtFocus);
+            }
+
+            // 2. Focus Ray (passes through F, reflects parallel)
+            const hit2 = getRayCircleIntersection({x: objX, y: objY}, {x: focusX, y: state.centerY}, cx, cy, r);
+            if (hit2) {
+                drawPath([{x: objX, y: objY}, hit2], 'rgba(168, 85, 247, 0.7)', 1.5);
+                
+                ctx.save();
+                ctx.strokeStyle = 'rgba(168, 85, 247, 0.7)';
+                ctx.lineWidth = 1.5;
+                // Parallel reflection
+                ctx.beginPath();
+                ctx.moveTo(hit2.x, hit2.y);
+                ctx.lineTo(hit2.x - 2000, hit2.y);
+                ctx.stroke();
+                if (state.showVirtual && !isAtFocus) {
+                    ctx.setLineDash([4, 4]);
+                    ctx.globalAlpha = 0.4;
+                    ctx.beginPath();
+                    ctx.moveTo(hit2.x, hit2.y);
+                    ctx.lineTo(targetX, hit2.y); // Parallel until it matches targetX
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // 3. Center Ray (passes through C, reflects back)
+            const hit3 = getRayCircleIntersection({x: objX, y: objY}, {x: cx, y: cy}, cx, cy, r);
+            if (hit3) {
+                drawPath([{x: objX, y: objY}, hit3], 'rgba(239, 68, 68, 0.7)', 1.5);
+                
+                ctx.save();
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+                ctx.lineWidth = 1.5;
+                const dx = hit3.x - cx;
+                const dy = hit3.y - cy;
+                const len = Math.sqrt(dx*dx + dy*dy);
+                // Back through C
+                ctx.beginPath();
+                ctx.moveTo(hit3.x, hit3.y);
+                ctx.lineTo(hit3.x + (dx/len)*2000, hit3.y + (dy/len)*2000);
+                ctx.stroke();
+                if (state.showVirtual && !isAtFocus) {
+                    ctx.setLineDash([4, 4]);
+                    ctx.globalAlpha = 0.4;
+                    ctx.beginPath();
+                    ctx.moveTo(hit3.x, hit3.y);
+                    ctx.lineTo(targetX, targetY);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function drawPath(pts, color, width) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+            ctx.stroke();
+        }
+
+        function drawArrow(x, h, color, label, virtual = false) {
+            const y = state.centerY;
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+            if (virtual) ctx.setLineDash([5, 5]);
+
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y - h);
+            ctx.stroke();
+
+            const sz = 8 * (h > 0 ? 1 : -1);
+            ctx.beginPath();
+            ctx.moveTo(x - 5, y - h + sz);
+            ctx.lineTo(x, y - h);
+            ctx.lineTo(x + 5, y - h + sz);
+            ctx.fill();
+
+            ctx.setLineDash([]);
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x, y - h - (h > 0 ? 10 : -18));
+            ctx.restore();
+        }
+
+        function drawPoint(x, label, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, state.centerY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x, state.centerY + 18);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.moveTo(0, state.centerY);
+            ctx.lineTo(canvas.width, state.centerY);
+            ctx.stroke();
+
+            const f = state.f;
+            const u = state.u;
+            const ho = state.ho;
+
+            const v = (u * f) / (u - f);
+            const m = -v / u;
+            const hi = m * ho;
+
+            els.statU.innerText = u.toFixed(1);
+            els.statF.innerText = f.toFixed(1);
+            els.statV.innerText = isFinite(v) ? v.toFixed(1) : '∞';
+            els.statM.innerText = isFinite(m) ? m.toFixed(2) : 'N/A';
+            els.label.innerText = f < 0 ? 'Concave Mirror' : (f > 0 ? 'Convex Mirror' : 'Plane Mirror');
+            els.label.className = f < 0 ? "text-xs font-black text-orange-400 uppercase tracking-widest" : "text-xs font-black text-blue-400 uppercase tracking-widest";
+
+            if (Math.abs(u - f) < 1) {
+                els.imageDesc.innerText = "Object at Focus: Rays are parallel. Image at infinity.";
+            } else {
+                const nature = v < 0 ? "Real" : "Virtual";
+                const orientation = m < 0 ? "Inverted" : "Upright";
+                const size = Math.abs(m) > 1.05 ? "Magnified" : (Math.abs(m) < 0.95 ? "Diminished" : "Same size");
+                els.imageDesc.innerText = `${nature}, ${orientation} and ${size} image.`;
+            }
+
+            drawMirror();
+            drawRays();
+
+            const pX = state.poleX;
+            const fX = pX + f;
+            const cX = pX + 2 * f;
+
+            if (f !== 0) {
+                drawPoint(fX, 'F', '#fbbf24');
+                drawPoint(cX, 'C', '#ef4444');
+            }
+            drawPoint(pX, 'P', '#f8fafc');
+
+            drawArrow(pX + u, ho, '#3b82f6', 'OBJECT');
+
+            if (isFinite(v)) {
+                drawArrow(pX + v, hi, v < 0 ? '#ef4444' : '#10b981', 'IMAGE', v > 0);
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const objX = state.poleX + state.u;
+            const fX = state.poleX + state.f;
+
+            if (Math.abs(x - objX) < 40) {
+                state.isDragging = true; state.dragTarget = 'object';
+            } else if (Math.abs(x - fX) < 25 && Math.abs(y - state.centerY) < 25) {
+                state.isDragging = true; state.dragTarget = 'focal';
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!state.isDragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+
+            if (state.dragTarget === 'object') {
+                state.u = Math.min(-5, x - state.poleX);
+            } else if (state.dragTarget === 'focal') {
+                state.f = x - state.poleX;
+                els.fRange.value = state.f;
+                els.fValue.innerText = Math.round(state.f);
+            }
+            render();
+        });
+
+        window.addEventListener('mouseup', () => state.isDragging = false);
+
+        els.fRange.addEventListener('input', (e) => {
+            state.f = parseInt(e.target.value);
+            els.fValue.innerText = state.f;
+            render();
+        });
+
+        els.hRange.addEventListener('input', (e) => {
+            state.ho = parseInt(e.target.value);
+            els.hValue.innerText = state.ho;
+            render();
+        });
+
+        document.getElementById('toggleRays').addEventListener('click', () => {
+            state.showRays = !state.showRays;
+            els.raysStatus.innerText = state.showRays ? 'ENABLED' : 'DISABLED';
+            render();
+        });
+
+        document.getElementById('toggleVirtual').addEventListener('click', () => {
+            state.showVirtual = !state.showVirtual;
+            els.virtualStatus.innerText = state.showVirtual ? 'VISIBLE' : 'HIDDEN';
+            render();
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            state.f = -150; state.u = -250; state.ho = 60;
+            els.fRange.value = -150; els.hRange.value = 60;
+            els.fValue.innerText = '-150'; els.hValue.innerText = '60';
+            render();
+        });
+
+        window.addEventListener('resize', resize);
+        window.onload = resize;
+
+    </script>
+</body>
+</html>
